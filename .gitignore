@@ -1,0 +1,13 @@
+# Ignoruj wagi modeli
+*.pt
+*.pth
+checkpoints/
+trash/
+
+# Ignoruj wirtualne środowisko
+venv/
+env/
+
+# Ignoruj foldery z wygenerowanymi danymi/wykresami (opcjonalnie)
+datasets/
+__pycache__/
