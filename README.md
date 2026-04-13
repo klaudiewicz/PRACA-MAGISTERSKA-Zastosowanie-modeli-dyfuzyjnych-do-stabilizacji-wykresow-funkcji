@@ -26,6 +26,7 @@ Charakterystyka:
 * kontrolowany poziom degradacji danych,
 * rekonstrukcja zgodna z wyuczonym rozkładem,
 * zastosowanie w odszumianiu i inpaintingu.
+
 ![Wykres 2: Próba odzyskania oryginalnego wykresu funkcji sin metodą SDEdit](wizualizacje/gifs/sdedit_denoising_comparison_sin.gif)
 
 
@@ -39,6 +40,7 @@ Model optymalizuje:
 * **likelihood** - zgodność z obserwacjami.
 
 Tę metodę stosuje się głównie w rekonstrukcji funkcji z rzadkich próbek, inpaintingu oraz interpolacji.
+
 
 ![Wykres 3: Odszumianie FunDPS](wizualizacje/ewolucja_odszumiania.png)
 
@@ -278,21 +280,26 @@ p_\theta(x_{t-1} | x_t)
 
 ### DDPM vs. FunDPS
 ![Wykres](wizualizacje/plots_3/square_wave_porownanie_ddpm_vs_fundps.png)
+
 ![Wykres](wizualizacje/plots_3/exp_porownanie_ddpm_vs_fundps.png)
 
 Porównanie:
+
 ![Wykres](wizualizacje/blad_l2_po_funkcjach_1.png)
+
 ![Wykres](wizualizacje/srednie_metryki_metod_1.png)
 
 
 ### SDEdit vs. FunDPS
 ![Wykres](wizualizacje/plots_3/porownanie_sdedit_vs_fundps_1_over_x.png)
+
 ![Wykres](wizualizacje/plots_3/porownanie_sdedit_vs_fundps_chirp.png)
 
 Porównanie:
-![Wykres](wizualizacje/blad_l2_po_funkcjach.png)
-![Wykres](wizualizacje/srednie_metryki_metod.png)
 
+![Wykres](wizualizacje/blad_l2_po_funkcjach.png)
+
+![Wykres](wizualizacje/srednie_metryki_metod.png)
 
 
 
@@ -316,8 +323,11 @@ Porównanie:
 ## Autorka
 
 Klaudia Stodółkiewicz
+
 *Zastosowanie modeli dyfuzyjnych do stabilizacji wykresów funkcji*
+
 Informatyka - Data Science | Akademia Górniczo-Hutnicza im. Stanisława Staszica w Krakowie
+
 2026
 
 
