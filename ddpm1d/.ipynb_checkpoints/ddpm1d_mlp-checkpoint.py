@@ -97,6 +97,17 @@ class DDPM1D:
             x_t = x_t + torch.sqrt(beta_t) * noise
 
         return x_t
+
+    @torch.no_grad()	
+    def q_sample(self, x_start, t, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        sqrt_alphas_bar_t = torch.sqrt(self.alphas_bar[t])[:, None]
+        sqrt_one_minus_alphas_bar_t = torch.sqrt(1. - self.alphas_bar[t])[:, None]
+
+        # Równanie: x_t = sqrt(alpha_bar_t) * x_0 + sqrt(1 - alpha_bar_t) * epsilon
+        return sqrt_alphas_bar_t * x_start + sqrt_one_minus_alphas_bar_t * noise
 	
     @torch.no_grad()
     def denoise_signal(self, noisy_x, t_start):
@@ -122,5 +133,53 @@ class DDPM1D:
 
             x_t = (1 / torch.sqrt(alpha_t)) * (x_t - ((1 - alpha_t) / torch.sqrt(1 - alpha_bar_t)) * noise_pred)
             x_t = x_t + torch.sqrt(beta_t) * noise
+
+        return x_t
+
+    @torch.no_grad()
+    def ddim_denoise_signal(self, noisy_x, t_start, skip_steps=10):
+        """
+        Zoptymalizowane odszumianie algorytmem DDIM, pozwalające przeskakiwać kroki.
+        skip_steps: Jeśli = 10, to odszumiamy co 10 krok (np. 300 -> 290 -> 280).
+        eta: Dla czystego DDIM (deterministycznego) wynosi 0.
+        """
+        x_t = noisy_x.clone()
+        eta = 0.0 # Deterministyczny skok
+
+        # Tworzymy wektor kroków od t_start w dół, aż do 0, skacząc co skip_steps
+        time_steps = list(reversed(range(0, t_start, skip_steps)))
+        # Upewniamy się, że krok "0" zawsze będzie na końcu
+        if time_steps[-1] != 0:
+            time_steps.append(0)
+
+        for i in range(len(time_steps) - 1):
+            curr_t = time_steps[i]
+            next_t = time_steps[i+1]
+            
+            # Wektory t dla całego batcha
+            t_tensor = torch.full((x_t.shape[0],), curr_t, device=self.device, dtype=torch.long)
+            
+            # 1. Predykcja szumu przez model
+            noise_pred = self.model(x_t, t_tensor)
+            
+            # 2. Wyciągnięcie parametrów dla aktualnego i następnego kroku
+            alpha_bar_t = self.alphas_bar[curr_t].view(-1, 1)
+            # Jeśli next_t wynosi -1 (zabezpieczenie), alpha_bar to 1.0 (brak szumu)
+            alpha_bar_next = self.alphas_bar[next_t].view(-1, 1) if next_t >= 0 else torch.ones_like(alpha_bar_t)
+
+            # 3. Predykcja "czystego" sygnału (x0_pred)
+            # x0_pred = (x_t - sqrt(1 - alpha_bar_t) * epsilon) / sqrt(alpha_bar_t)
+            x0_pred = (x_t - torch.sqrt(1 - alpha_bar_t) * noise_pred) / torch.sqrt(alpha_bar_t)
+
+            # 4. Obliczenie wariancji kroku (zależnej od parametru eta)
+            # Dla eta=0 (czyste DDIM), to wynosi 0
+            sigma_t = eta * torch.sqrt((1 - alpha_bar_next) / (1 - alpha_bar_t) * (1 - alpha_bar_t / alpha_bar_next))
+            
+            # 5. Obliczenie kierunku "wskazującego" na zaszumiony sygnał (tzw. direction pointing to x_t)
+            dir_xt = torch.sqrt(1 - alpha_bar_next - sigma_t**2) * noise_pred
+            
+            # 6. Złożenie w nowy krok x_{t-1} (lub x_{t-skip_steps})
+            noise = torch.randn_like(x_t) if next_t > 0 and eta > 0 else 0.0
+            x_t = torch.sqrt(alpha_bar_next) * x0_pred + dir_xt + sigma_t * noise
 
         return x_t

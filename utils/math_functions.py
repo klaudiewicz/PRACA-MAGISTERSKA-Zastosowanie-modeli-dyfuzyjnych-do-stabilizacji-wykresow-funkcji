@@ -65,9 +65,18 @@ class MathFunctions:
     def get_dataset(self, name, num_samples=1000, mode='train'):
         """
         Generuje zbiór danych ze wszystkimi funkcjami, dodając wariancje (przesunięcia fazy i amplitudy).
-        Dla mode='test' używa innego ziarna, aby wygenerować niewidziane dane.
+        Używa unikalnych ziaren (seed) dla train, val i test, aby zapobiec wyciekowi danych.
         """
-        seed = 42 if mode == 'train' else 999
+        # Przypisanie dedykowanego ziarna dla każdego trybu
+        if mode == 'train':
+            seed = 42
+        elif mode == 'val':
+            seed = 123  # Unikalne ziarno dla walidacji
+        elif mode == 'test':
+            seed = 999
+        else:
+            raise ValueError(f"Nieznany tryb (mode): {mode}. Wybierz 'train', 'val' lub 'test'.")
+            
         np.random.seed(seed)
         
         X_data = []
