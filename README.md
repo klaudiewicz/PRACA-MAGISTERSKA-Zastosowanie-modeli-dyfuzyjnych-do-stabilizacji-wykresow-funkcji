@@ -259,29 +259,22 @@ p_\theta(x_{t-1} | x_t)
 ## Przykłady wyników
 
 ### DDPM vs. FunDPS
-![Wykres](wizualizacje/plots_3/square_wave_porownanie_ddpm_vs_fundps.png)
+| Ewolucja zdolności odszumiania (SDEdit) | Rekonstrukcja z 10% punktów pomiarowych (FunDPS) |
+| :---: | :---: |
+| ![SDEdit Evolution](images/visualisations/SDEdit_comparison_sin.png) | ![FunDPS Panel](images/experiment3/fundps_panel_mixed_freq_chirp.png) |
 
-![Wykres](wizualizacje/plots_3/exp_porownanie_ddpm_vs_fundps.png)
 
-Porównanie:
-
-![Wykres](wizualizacje/blad_l2_po_funkcjach_1.png)
-
-![Wykres](wizualizacje/srednie_metryki_metod_1.png)
-
+## Porównanie charakterystyk
 
 ### SDEdit vs. FunDPS
-![Wykres](wizualizacje/plots_3/porownanie_sdedit_vs_fundps_1_over_x.png)
+| Kompromis wydajnościowy: Czas pojedynczej inferencji [s] | Kompromis jakościowy: Profil globalnego błędu $L_2$ |
+| :---: | :---: |
+| ![Profil Czasu](images/experiment3/comparison_bars_total_time_s.png) | ![Profil Bledu L2](images/experiment3/comparison_bars_l2_error.png) |
 
-![Wykres](wizualizacje/plots_3/porownanie_sdedit_vs_fundps_chirp.png)
-
-Porównanie:
-
-![Wykres](wizualizacje/blad_l2_po_funkcjach.png)
-
-![Wykres](wizualizacje/srednie_metryki_metod.png)
-
-
+#### Skrajne przypadki efektywności stabilizacji wykresów (Najlepsza vs Najgorsza konfiguracja)
+<p align="center">
+  <img src="images/experiment2/analysis/v_comp_damped_oscillator_best_Conv1D_C128_1e-3_80_lin_vs_worst_MLP_C32_1e-4_80_cos.png" width="85%" alt="Best vs Worst Global Comparison"/>
+</p>
 
 
 ## Ograniczenia
