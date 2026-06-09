@@ -80,29 +80,27 @@ Najważniejsze parametry wpływające na działanie modeli:
 
 ## Eksperymenty
 
-### 1. Generacja bezwarunkowa
+### 1. Pojemność architektur i zjawisko przeuczenia w modelach DDPM 1D
 
-`1. eksperyment_generacja_bezwarunkowa.ipynb`
+`01_pojemnosc_i_przeuczenie.ipynb`
 
 * generacja funkcji 1D z DDPM,
 * porównanie architektur: MLP, Conv1D, U-Net,
 * analiza overfittingu i capacity modeli.
 
 
+### 2. Odszumianie i rekonstrukcja metodą SDEdit.
 
-### 2. Odszumianie – SDEdit
+`02_denoising_sdedit.ipynb`
 
-`2. eksperyment_odszumianie_sdedit.ipynb`
-
-* rekonstrukcja zaszumionych sygnałów,
+* rekonstrukcja zaszumionych funkcji,
 * analiza odporności modeli,
 * wykorzystanie DDPM + SDEdit.
 
 
+### 3. Warunkowa rekonstrukcja funkcji 1D z użyciem FunDPS
 
-### 3. Rekonstrukcja warunkowa – FunDPS
-
-`3. eksperyment_fundps.ipynb`
+`03_denosing_fundps.ipynb`
 
 * rekonstrukcja funkcji z niepełnych danych,
 * analiza problemów odwrotnych,
@@ -112,24 +110,11 @@ Najważniejsze parametry wpływające na działanie modeli:
   * parametrów warunkowania.
 
 
-
-### 4. Porównanie metod
-
-`4. eksperyment_ddpm_vs_fundps`
-
-Wyniki wskazują, że:
-
-* FunDPS znacząco przewyższa DDPM w zadaniach rekonstrukcji,
-* U-Net jest najlepszą architekturą wśród modeli DDPM,
-* modele MLP i Conv1D mają ograniczoną zdolność generalizacji.
-
-
-
 ## Wizualizacje
 
 Pliki:
 
-* `0. wizualizacje_wplywu_parametrow_i_odszumiania.ipynb`
+* `00_wprowadzenie_teoretyczne.ipynb`
 * `tworzenie_wizualizacji.ipynb`
 
 Zawierają:
@@ -144,25 +129,23 @@ Zawierają:
 
 ```
 .
-├── ddpm1d/
-│   ├── ddpm1d_mlp.py
-│   ├── ddpm1d_conv1d.py
-│   └── ddpm1d_unet.py
-│
-├── edm1d/
-│   └── edmdenoiser1d.py
+├── models/
+│   ├── mlp.py
+│   ├── conv1d.py
+│   ├── unet.py
+│   ├── ddpm1d.py
+│   └── edm1d.py
 │
 ├── utils/
-│   ├── math_functions.py
+│   ├── samplers.py
 │   ├── metrics.py
-│   └── plot.py
+│   └── visualisations.py
 │
 ├── notebooks/
-│   ├── 0. wizualizacje_wplywu_parametrow_i_odszumiania.ipynb
-│   ├── 1. eksperyment_generacja_bezwarunkowa.ipynb
-│   ├── 2. eksperyment_odszumianie_sdedit.ipynb
-│   ├── 3. eksperyment_fundps.ipynb
-│   ├── 4. eksperyment_ddpm_vs_fundps
+│   ├── 00_wprowadzenie_teoretyczne.ipynb
+│   ├── 01_pojemnosc_i_przeuczenie.ipynb
+│   ├── 02_denoising_sdedit.ipynb
+│   ├── 03_denosing_fundps.ipynb
 │   └── tworzenie_wizualizacji.ipynb
 ```
 
@@ -218,19 +201,16 @@ jupyter notebook
 ## Reprodukowalność wyników
 
 1. **Trenowanie modeli (DDPM):**
-   `1. eksperyment_generacja_bezwarunkowa.ipynb`
+   `01_pojemnosc_i_przeuczenie.ipynb`
 
 2. **Odszumianie (SDEdit):**
-   `2. eksperyment_odszumianie_sdedit.ipynb`
+   `02_denoising_sdedit.ipynb`
 
 3. **Rekonstrukcja warunkowa (FunDPS):**
-   `3. eksperyment_fundps.ipynb`
+   `03_denosing_fundps.ipynb`
 
-4. **Porównanie metod:**
-   `4. eksperyment_ddpm_vs_fundps`
-
-5. **Wizualizacje:**
-   `0. wizualizacje_wplywu_parametrow_i_odszumiania.ipynb`
+4. **Wizualizacje:**
+   `00_wprowadzenie_teoretyczne.ipynb`
    `tworzenie_wizualizacji.ipynb`
 
 
@@ -238,7 +218,7 @@ jupyter notebook
 
 Dane wykorzystywane w eksperymentach są **syntetyczne** i generowane dynamicznie.
 
-* źródło: `utils/math_functions.py`
+* źródło: `utils/samplers.py`
 * typy funkcji:
   * wielomiany
   * funkcje trygonometryczne
