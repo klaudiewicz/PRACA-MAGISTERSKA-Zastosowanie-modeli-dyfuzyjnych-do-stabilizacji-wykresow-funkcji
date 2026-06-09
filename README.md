@@ -16,7 +16,7 @@ W niniejszym repozytorium skupiono się na badaniu, w jaki sposób zmiana parame
 Denoising Diffusion Probabilistic Models (DDPM) to generatywne modele probabilistyczne, które uczą się rozkładu danych poprzez proces stopniowego dodawania szumu (proces forward - wykres 1) oraz jego odwracania (proces reverse - wykres 2) - sieć neuronowa uczy się usuwać szum i odzyskiwać oryginalny sygnał/wykres funkcji.
 Model uczy się przybliżenia rozkładu danych poprzez minimalizację błędu rekonstrukcji szumu.
 
-![Wykres 1: Stopniowe dodawanie szumu do funkcji sin](images/gifs/forward_process_sin.gif)
+![Wykres 1: Stopniowe dodawanie szumu do funkcji sin](images/visualisations/forward_process_sin.gif)
 
 ### SDEdit
 
@@ -27,7 +27,7 @@ Charakterystyka:
 * rekonstrukcja zgodna z wyuczonym rozkładem,
 * zastosowanie w odszumianiu i inpaintingu.
 
-![Wykres 2: Próba odzyskania oryginalnego wykresu funkcji sin metodą SDEdit](images/gifs/sdedit_denoising_comparison_sin.gif)
+![Wykres 2: Próba odzyskania oryginalnego wykresu funkcji sin metodą SDEdit](images/visualisations/sdedit_denoising_comparison_sin.gif)
 
 
 ### FunDPS
@@ -42,7 +42,7 @@ Model optymalizuje:
 Tę metodę stosuje się głównie w rekonstrukcji funkcji z rzadkich próbek, inpaintingu oraz interpolacji.
 
 
-![Wykres 3: Odszumianie FunDPS](images/ewolucja_odszumiania.png)
+![Wykres 3: Odszumianie FunDPS](images/visualisations/ewolucja_odszumiania.png)
 
 
 
@@ -62,7 +62,7 @@ W eksperymentach wykorzystano dwa główne typy szumu:
 * modeluje realistyczne zakłócenia,
 * generowany z wykorzystaniem funkcji kowariancji.
 
-![Wykres 4: Różnice pomiędzy rodzajami szumów](images/grf_vs_white.png)
+![Wykres 4: Różnice pomiędzy rodzajami szumów](images/visualisations/grf_vs_white.png)
 
 
 
