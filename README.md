@@ -45,7 +45,6 @@ Tę metodę stosuje się głównie w rekonstrukcji funkcji z rzadkich próbek, i
 ![Wykres 3: Odszumianie FunDPS](images/visualisations/ewolucja_odszumiania.png)
 
 
-
 ## Rodzaje szumu
 
 W eksperymentach wykorzystano dwa główne typy szumu:
@@ -63,7 +62,6 @@ W eksperymentach wykorzystano dwa główne typy szumu:
 * generowany z wykorzystaniem funkcji kowariancji.
 
 ![Wykres 4: Różnice pomiędzy rodzajami szumów](images/visualisations/grf_vs_white.png)
-
 
 
 ## Hiperparametry
@@ -259,38 +257,51 @@ p_\theta(x_{t-1} | x_t)
 ## Przykłady wyników
 
 ### DDPM vs. FunDPS
-| Ewolucja zdolności odszumiania (SDEdit) | Rekonstrukcja z 10% punktów pomiarowych (FunDPS) |
+| Zdolność odszumiania (SDEdit) | Rekonstrukcja z 10% punktów pomiarowych (FunDPS) |
 | :---: | :---: |
-| ![SDEdit Evolution](images/visualisations/SDEdit_comparison_sin.png) | ![FunDPS Panel](images/experiment3/fundps_panel_mixed_freq_chirp.png) |
+| ![SDEdit Evolution](images/experiment2/J_Reconstruction_UNet_C128_5e-4_mixed_freq.png) | ![FunDPS Panel](images/experiment3/fundps_panel_mixed_freq_chirp.png) |
 
 
-## Porównanie charakterystyk
+## Porównanie  SDEdit vs FunDPS
 
-### SDEdit vs. FunDPS
-| Kompromis wydajnościowy: Czas pojedynczej inferencji [s] | Kompromis jakościowy: Profil globalnego błędu $L_2$ |
-| :---: | :---: |
-| ![Profil Czasu](images/experiment3/comparison_bars_total_time_s.png) | ![Profil Bledu L2](images/experiment3/comparison_bars_l2_error.png) |
+Oba algorytmy bazują na modelach dyfuzyjnych, jednak zostały zaprojektowane do rozwiązywania zupełnie odmiennych problemów numerycznych:
 
-#### Skrajne przypadki efektywności stabilizacji wykresów (Najlepsza vs Najgorsza konfiguracja)
-<p align="center">
-  <img src="images/experiment2/analysis/v_comp_damped_oscillator_best_Conv1D_C128_1e-3_80_lin_vs_worst_MLP_C32_1e-4_80_cos.png" width="85%" alt="Best vs Worst Global Comparison"/>
-</p>
+| Cecha potoku obliczeniowego | Metoda SDEdit (Eksperyment II) | Metoda FunDPS (Eksperyment III) |
+| :--- | :--- | :--- |
+| **Główny cel** | Globalne odszumianie i stabilizacja | Imputacja i rekonstrukcja z rzadkich danych |
+| **Stan wejściowy** | Pełny sygnał ciągły z nałożonym szumem | Wybrakowany sygnał (np. tylko 10% znanych punktów) |
+| **Najlepsza architektura** | Conv1D / U-Net 1D | U-Net 1D (wspierany nawigacją) |
+| **Typowy błąd $L_2$** | 1.1% – 5.2% (zależnie od funkcji) | 0.18% – 2.5% (dla szumu białego) |
+| **Średni czas operacji** | **0.003 s – 0.005 s** (Milisekundy) | **14.5 s – 14.7 s** (Sekundy) |
+| **Najbardziej wpływowy parametr** | Harmonogram, skok solwera ($S$) oraz punkt startu ($R$) | Siła nawigacji gradientowej ($\zeta$) |
 
+### Kiedy co wybrać?
 
-## Ograniczenia
+* **SDEdit, gdy:** kompletny, ciągły przebieg fali, który jest silnie zakłócony szumem wysokoczęstotliwościowym. Dzięki czasowi przetwarzania na poziomie kilku milisekund (przy konfiguracji Conv1D, $T=80$, $S=2$ i harmonogramie liniowym), metoda ta idealnie nadaje się do systemów **pracujących w czasie rzeczywistym (real-time)**.
+* **FunDPS, gdy:** układ rejestruje dane w sposób rzadki lub doszło do drastycznej utraty próbek (**nawet do 90% braków**). Algorytm z priorem opartym na szumie białym oraz siłą nawigacji $\zeta \in [2.0, 4.0]$ gwarantuje bezbłędne odtworzenie ciągłej geometrii fali. Ze względu na długi czas obliczeń (ok. 14 sekund) jest to rozwiązanie dedykowane do **analizy stacjonarnej**.
 
-* modele trenowane na danych syntetycznych,
-* ograniczona liczba architektur,
-* brak testów na danych rzeczywistych,
-* wysokie koszty obliczeniowe dla U-Net.
+## ⚠️ Ograniczenia projektu
 
+Opracowany potok obliczeniowy wykazuje kilka kluczowych ograniczeń metodologicznych i strukturalnych:
 
-## Możliwe rozszerzenia
+* **Izolowany i sztywny prior bezwarunkowy:** Proces uczenia sieci był prowadzony dla jednej, konkretnej funkcji na cały cykl. Model optymalny dla fali krokowej jest bezużyteczny dla funkcji wykładniczej. Każda zmiana badanej krzywej wymusza czasochłonne uczenie wag od zera, co ogranicza elastyczność systemu w warunkach zmiennych zadań.
+* **Brak niezależności rozdzielczościowej:** Ponieważ modele dyfuzyjne operują bezpośrednio na wektorach o stałej długości, system jest zablokowany na sztywnej dyskretyzacji siatki. Algorytmy nie posiadają zdolności do ciągłej interpolacji – nie rekonstruują ciągłej przestrzeni funkcyjnej, a jedynie skończony zbiór punktów.
+* **Statyczne sterowanie solwerem:** Parametry takie jak siła nawigacji ($\zeta$) czy punkt startu ($\tau$) są wprowadzane ręcznie jako wartości stałe. Brak dynamicznej pętli sprzężenia zwrotnego sprawia, że potok jest podatny na błędy konfiguracji i łatwo wpada w strefy niestabilności numerycznej (np. eksplozje gradientu wokół asymptot).
 
-* zastosowanie do danych rzeczywistych (np. pomiary fizyczne),
-* rozszerzenie na funkcje 2D,
-* wykorzystanie nowszych modeli (np. EDM, score-based models),
-* optymalizacja czasu inferencji.
+---
+
+## Potencjalne zastosowania i rozwój
+
+### Obszary wdrożeniowe
+* Wykorzystanie FunDPS do szybkiego wygładzania i rekonstrukcji linii wykresów z wielogodzinnych symulacji na podstawie rzadkiego zestawu próbek (zamiast generowania tysięcy punktów metodą *brute force*).
+* Alternatywa dla klasycznej metody najmniejszych kwadratów w laboratoriach pomiarowych, pozwalająca na odbudowę kompletnych funkcji z rozproszonych punktów z zachowaniem geometrycznych założeń o gładkości linii.
+* Działanie jako stochastyczny filtr nakładający więzy ciągłości na rozwiązania trudnych równań różniczkowych zwyczajnych o nieznanej postaci analitycznej.
+
+### Sugerowane kierunki badawcze
+* Porzucenie modeli jednoukładowych na rzecz sieci dyfuzyjnych trenowanych na całych rodzinach funkcji jednocześnie, sterowanych wektorami cech (np. stopień wielomianu, częstotliwość).
+* Zastąpienie konwolucji blokami samoatencji (*self-attention*), co pozwoli modelowi generatywnemu na jednoczesne wychwytywanie lokalnych załamań oraz globalnych trendów (okresowości, asymptot) na całej długości dziedziny.
+* Ciągłe stochastyczne równania różniczkowe (SDE): Oparcie generacji na ciągłym modelowaniu bazującym na wynikach (*score matching*), co uniezależni proces odszumiania od sztywnej liczby kroków $T$.
+* Ciągłe pola neuronowe (INR): Zastąpienie wektorów reprezentacją współrzędnościową w celu uzyskania całkowitej niezależności od rozdzielczości siatki wejściowej.
 
 
 ## Autorka
