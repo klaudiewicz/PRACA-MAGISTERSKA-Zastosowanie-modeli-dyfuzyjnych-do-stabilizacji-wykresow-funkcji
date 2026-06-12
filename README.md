@@ -259,7 +259,7 @@ p_\theta(x_{t-1} | x_t)
 ### DDPM vs. FunDPS
 | Zdolność odszumiania (SDEdit) | Rekonstrukcja z 10% punktów pomiarowych (FunDPS) |
 | :---: | :---: |
-| ![SDEdit Evolution](images/experiment2/J_Reconstruction_UNet_C128_5e-4_mixed_freq.png) | ![FunDPS Panel](images/experiment3/fundps_panel_mixed_freq_chirp.png) |
+| ![SDEdit Reconstruction](images/experiment2/function_analysis/J_Reconstruction_UNet_C128_5e-4_mixed_freq.png) | ![FunDPS Reconstruction](images/experiment3/optimal_recon_white_mixed_freq.png) |
 
 
 ## Porównanie  SDEdit vs FunDPS
@@ -280,7 +280,7 @@ Oba algorytmy bazują na modelach dyfuzyjnych, jednak zostały zaprojektowane do
 * **SDEdit, gdy:** kompletny, ciągły przebieg fali, który jest silnie zakłócony szumem wysokoczęstotliwościowym. Dzięki czasowi przetwarzania na poziomie kilku milisekund (przy konfiguracji Conv1D, $T=80$, $S=2$ i harmonogramie liniowym), metoda ta idealnie nadaje się do systemów **pracujących w czasie rzeczywistym (real-time)**.
 * **FunDPS, gdy:** układ rejestruje dane w sposób rzadki lub doszło do drastycznej utraty próbek (**nawet do 90% braków**). Algorytm z priorem opartym na szumie białym oraz siłą nawigacji $\zeta \in [2.0, 4.0]$ gwarantuje bezbłędne odtworzenie ciągłej geometrii fali. Ze względu na długi czas obliczeń (ok. 14 sekund) jest to rozwiązanie dedykowane do **analizy stacjonarnej**.
 
-## ⚠️ Ograniczenia projektu
+## Ograniczenia projektu
 
 Opracowany potok obliczeniowy wykazuje kilka kluczowych ograniczeń metodologicznych i strukturalnych:
 
