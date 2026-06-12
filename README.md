@@ -259,7 +259,7 @@ p_\theta(x_{t-1} | x_t)
 ### DDPM vs. FunDPS
 | Zdolność odszumiania (SDEdit) | Rekonstrukcja z 10% punktów pomiarowych (FunDPS) |
 | :---: | :---: |
-| ![SDEdit Reconstruction](images/experiment2/function_analysis/J_Reconstruction_UNet_C128_5e-4_mixed_freq.png) | ![FunDPS Reconstruction](images/experiment3/optimal_recon_white_mixed_freq.png) |
+| ![SDEdit Reconstruction](images/experiment2/function_analysis/J_Reconstruction_UNet_C128_5e-4_mixed_freq.png) | ![FunDPS Reconstruction](images\experiment3\optimal_recon_white_mixed_freq.png") |
 
 
 ## Porównanie  SDEdit vs FunDPS
