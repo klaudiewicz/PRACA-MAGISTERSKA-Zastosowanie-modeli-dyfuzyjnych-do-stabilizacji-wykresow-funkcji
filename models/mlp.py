@@ -27,7 +27,6 @@ class DenoiseNet1D_MLP(nn.Module):
         self.act = nn.SiLU()
 
     def forward(self, x, t):
-	        # 1. Zabezpieczenie wejścia - konwersja [B, 1, L] na [B, L]
 	        is_3d = False
 	        if x.dim() == 3:
 	            is_3d = True
@@ -37,7 +36,6 @@ class DenoiseNet1D_MLP(nn.Module):
 	        t_emb = self.time_mlp(t) # [B, Time_Emb_Dim]
 	
 	        x = self.fc1(x)
-	        # Teraz dodawanie [B, Hidden] + [B, Hidden] działa bez błędów broadcastingu
 	        x = x + self.time_proj1(t_emb)
 	        x = self.act(x)
 	
@@ -47,7 +45,6 @@ class DenoiseNet1D_MLP(nn.Module):
 	
 	        out = self.out(x) # [B, L]
 	        
-	        # 2. Przywrócenie formatu oczekiwanego przez Runnera [B, 1, L]
 	        if is_3d:
 	            out = out.unsqueeze(1)
 	            

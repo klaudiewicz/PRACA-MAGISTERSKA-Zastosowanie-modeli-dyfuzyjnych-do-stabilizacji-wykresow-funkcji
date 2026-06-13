@@ -85,5 +85,4 @@ class DenoiseNet1D_UNet(nn.Module):
 	        
 	        out = self.outc(x5) # Ma kształt [B, 1, L]
 	        
-	        # 2. Zwracamy format [B, 1, L] (usunięto squeeze(1))
 	        return out

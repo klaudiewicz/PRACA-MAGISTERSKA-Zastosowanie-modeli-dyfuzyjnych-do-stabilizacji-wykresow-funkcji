@@ -47,7 +47,6 @@ class DenoiseNet1D_Conv(nn.Module):
             nn.SiLU()
         )
         
-        # Updated references to use base_channels
         self.input_proj = nn.Conv1d(1, base_channels, kernel_size=1)
 
         self.blocks = nn.ModuleList([
