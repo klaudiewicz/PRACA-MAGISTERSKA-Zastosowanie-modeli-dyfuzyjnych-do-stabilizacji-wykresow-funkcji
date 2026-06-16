@@ -144,6 +144,7 @@ Zawierają:
 │   ├── 01_pojemnosc_i_przeuczenie.ipynb
 │   ├── 02_denoising_sdedit.ipynb
 │   ├── 03_denosing_fundps.ipynb
+│   ├── de_application.ipynb
 │   └── tworzenie_wizualizacji.ipynb
 ```
 
