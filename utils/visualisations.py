@@ -20,6 +20,16 @@ from matplotlib.patches import Patch
 from models.edm1d import FunDPSSampler, FunDPSExperimentRunner, generate_grf_1d, SigmaEmbedding, EDMDenoiser1D, ForwardOperator
 from sklearn.ensemble import RandomForestRegressor
 from models.ddpm1d import DDPM1D, SinusoidalPositionEmbeddings, get_beta_schedule
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
+from sklearn.inspection import permutation_importance
+from scipy.stats import mannwhitneyu, spearmanr
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import warnings
+
 
 sns.set_style("whitegrid")
 
@@ -2311,7 +2321,6 @@ def plot_fundps_comparison_batches(target_funcs, res_white, res_grf, save_dir='.
             plt.close()
             display(Image(image_path))
 
-
 def calculate_fundps_feature_importance(results_dict, noise_name):
     all_trials_data = []
     for func_name, func_data in results_dict.items():
@@ -2319,25 +2328,48 @@ def calculate_fundps_feature_importance(results_dict, noise_name):
             continue
         df_func = pd.DataFrame(func_data['metrics_history'])
         if not df_func.empty:
+            df_func['func_name'] = func_name   
             all_trials_data.append(df_func)
 
-    df_global   = pd.concat(all_trials_data, ignore_index=True)
-    df_filtered = df_global[(df_global['Steps'] > 2) & (df_global['L2_Error'] <= 15.0)].copy()
-    X = df_filtered[['Steps', 'Zeta']]
-    y = df_filtered['L2_Error']
+    df_global = pd.concat(all_trials_data, ignore_index=True)
 
-    rf = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf.fit(X, y)
-    importances = rf.feature_importances_
+    df_filtered = df_global[df_global['Steps'] > 2].copy()
+
+    domain_med  = df_filtered.groupby('func_name')['L2_Error'].transform('median')
+    df_filtered['L2_residual'] = df_filtered['L2_Error'] - domain_med
+
+    X = df_filtered[['Steps', 'Zeta']]
+    y = df_filtered['L2_residual']  
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    rf = RandomForestRegressor(n_estimators=300, max_depth=4, random_state=42, n_jobs=-1)
+    rf.fit(X_train, y_train)
+
+    r2 = r2_score(y_test, rf.predict(X_test))
+    print(f"  Test R² = {r2:.3f}")
+    if r2 < 0.3:
+        print(" R² < 0.3 — ważności mogą być niestabilne!")
+
+    perm = permutation_importance(
+        rf, X_test, y_test,
+        n_repeats=30, random_state=42
+    )
 
     print('\n' + '-' * 65)
     print(f' WRAŻLIWOŚĆ HIPERPARAMETRÓW DLA SZUMU: {noise_name.upper()}')
     print('-' * 65)
-    print(f' Liczba kroków próbkowania (N_steps) : {importances[0]*100:.2f}% wpływu')
-    print(f' Siła nawigacji gradientowej (Zeta)  : {importances[1]*100:.2f}% wpływu')
+    for feat, imp, std in zip(
+        ['Steps', 'Zeta'],
+        perm.importances_mean,
+        perm.importances_std
+    ):
+        print(f'  {feat:<35}: {imp:+.4f} ± {std:.4f}')
     print('-' * 65)
-    return importances
 
+    return perm.importances_mean
 
 def find_worst_fundps_configurations(results_dict, noise_name):
     worst_rows = []
@@ -2905,5 +2937,217 @@ def plot_fundps_time_vs_quality(results_dict, func_name, noise_name, save_dir='.
     plt.savefig(os.path.join(save_dir, f'pareto_{noise_name.lower()}_{func_name}.png'), bbox_inches='tight')
     plt.show()
     plt.close()
+
+
+def analyze_nsteps_tradeoff(results_dict, noise_name='', time_col=None):
+    records = []
+    for func_name, func_data in results_dict.items():
+        if func_data is None or 'metrics_history' not in func_data:
+            continue
+        df_func = pd.DataFrame(func_data['metrics_history'])
+        if df_func.empty:
+            continue
+        df_func['func_name'] = func_name
+        records.append(df_func)
+
+    if not records:
+        print("Brak danych.")
+        return None
+
+    df = pd.concat(records, ignore_index=True)
+    #df = df[df['Steps'] > 2].copy()  
+
+    time_available = time_col is not None and time_col in df.columns
+    steps_vals     = sorted(df['Steps'].unique())
+
+    if len(steps_vals) < 3:
+        print("Za mało unikalnych wartości Steps do analizy trendu.")
+        return None
+
+    agg = (
+        df.groupby('Steps')['L2_Error']
+        .agg(median='median', mean='mean',
+             q25=lambda x: x.quantile(0.25),
+             q75=lambda x: x.quantile(0.75),
+             n='count')
+        .reset_index()
+    )
+    if time_available:
+        agg = agg.merge(
+            df.groupby('Steps')[time_col].median().reset_index(),
+            on='Steps'
+        )
+
+    steps_arr = agg['Steps'].values.astype(float)
+    l2_arr    = agg['median'].values
+
+    rho, p_rho = spearmanr(steps_arr, l2_arr)
+
+    def find_elbow(x, y):
+
+        x_n = (x - x.min()) / (x.max() - x.min() + 1e-9)
+        y_n = (y - y.min()) / (y.max() - y.min() + 1e-9)
+        p1   = np.array([x_n[0],  y_n[0]])
+        p2   = np.array([x_n[-1], y_n[-1]])
+        line = p2 - p1
+        dists = [
+            np.abs(np.cross(line, p1 - np.array([x_n[i], y_n[i]])))
+            / (np.linalg.norm(line) + 1e-9)
+            for i in range(len(x_n))
+        ]
+        idx = int(np.argmax(dists))
+        return x[idx], idx
+
+    elbow_val, elbow_idx = find_elbow(steps_arr, l2_arr)
+
+    mwu_results = []
+    for i in range(len(steps_vals) - 1):
+        s_a = steps_vals[i]
+        s_b = steps_vals[i + 1]
+        g_a = df[df['Steps'] == s_a]['L2_Error'].values
+        g_b = df[df['Steps'] == s_b]['L2_Error'].values
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            _, p = mannwhitneyu(g_a, g_b, alternative='greater')
+        mwu_results.append({
+            'steps_a': s_a,
+            'steps_b': s_b,
+            'label':   f"{s_a}→{s_b}",
+            'delta':   float(np.median(g_a) - np.median(g_b)),
+            'p':       float(p),
+            'sig':     p < 0.05,
+            'after_elbow': s_a >= elbow_val,
+        })
+    mwu_df = pd.DataFrame(mwu_results)
+
+    if time_available:
+        time_arr = agg[time_col].values
+        rho_t, p_t = spearmanr(steps_arr, time_arr)
+        eff_rows = []
+        for i in range(len(steps_arr) - 1):
+            dl2 = float(l2_arr[i]    - l2_arr[i + 1])
+            dt  = float(time_arr[i + 1] - time_arr[i])
+            eff_rows.append({
+                'label': f"{int(steps_arr[i])}→{int(steps_arr[i+1])}",
+                'ΔL2':   dl2,
+                'Δczas': dt,
+                'efektywność': dl2 / dt if abs(dt) > 1e-9 else np.nan,
+                'after_elbow': steps_arr[i] >= elbow_val,
+            })
+        eff_df = pd.DataFrame(eff_rows)
+
+    sep = '=' * 62
+    print(f"\n{sep}")
+    print(f"  ANALIZA N_STEPS — SZUM: {noise_name.upper()}")
+    print(sep)
+
+    print(f"\n[A] Korelacja Spearmana (Steps → L2_Error):")
+    print(f"    ρ = {rho:+.3f},  p = {p_rho:.4f}  "
+          f"{'— istotna' if p_rho < 0.05 else '— brak istotności'}")
+
+    print(f"\n[B] Zrównoważony punkt roboczy (elbow):")
+    print(f"    N_steps  = {int(elbow_val)}")
+    print(f"    L2_Error = {l2_arr[elbow_idx]:.3f}%")
+
+    print(f"\n[C] Istotność poprawy między krokami (Mann-Whitney U):")
+    print(f"    {'Para':>10}  {'Δmediana':>10}  {'p-value':>10}  {'Sig':>5}  {'Strefa':>12}")
+    print(f"    {'-'*55}")
+    for r in mwu_results:
+        strefa = 'po elbow' if r['after_elbow'] else 'przed elbow'
+        sig    = '✓' if r['sig'] else '✗'
+        print(f"    {r['label']:>10}  {r['delta']:>+10.3f}  "
+              f"{r['p']:>10.4f}  {sig:>5}  {strefa:>12}")
+
+    if time_available:
+        print(f"\n[D] Monotoniczny wzrost czasu:")
+        print(f"    ρ = {rho_t:+.3f},  p = {p_t:.4f}")
+
+        print(f"\n[E] Efektywność marginalna (ΔL2 / Δczas):")
+        print(f"    {'Para':>10}  {'ΔL2':>8}  {'Δczas':>8}  {'Efektyw.':>10}  {'Strefa':>12}")
+        print(f"    {'-'*55}")
+        for r in eff_df.itertuples():
+            strefa = 'po elbow' if r.after_elbow else 'przed elbow'
+            print(f"    {r.label:>10}  {r.ΔL2:>+8.3f}  "
+                  f"{r.Δczas:>8.4f}  {r.efektywność:>10.3f}  {strefa:>12}")
+
+    n_before = mwu_df[~mwu_df['after_elbow']]['sig'].sum()
+    n_after  = mwu_df[ mwu_df['after_elbow']]['sig'].sum()
+
+    print(f"\n{sep}")
+    print(f"  WNIOSEK")
+    print(f"  Istotne poprawy przed elbow (N≤{int(elbow_val)}): {n_before}")
+    print(f"  Istotne poprawy po elbow    (N>{int(elbow_val)}): {n_after}")
+    if n_after == 0:
+        print(f"  ✓ HIPOTEZA POTWIERDZONA")
+    elif n_after < n_before:
+        print(f"  ~ HIPOTEZA CZĘŚCIOWO POTWIERDZONA")
+    else:
+        print(f"  ✗ HIPOTEZA OBALONA")
+    print(sep + '\n')
+
+    n_cols = 3 if time_available else 2
+    fig, axes = plt.subplots(1, n_cols, figsize=(5.5 * n_cols, 4.5))
+
+    ax = axes[0]
+    ax.plot(steps_arr, l2_arr, 'o-', color='#2563eb', lw=2, ms=6)
+    ax.fill_between(steps_arr, agg['q25'], agg['q75'],
+                    alpha=0.15, color='#2563eb', label='IQR (25–75%)')
+    ax.axvline(elbow_val, color='#ef4444', ls='--', lw=1.5,
+               label=f'Elbow N={int(elbow_val)}')
+    ax.set_xlabel('N_steps')
+    ax.set_ylabel('Mediana L2 [%]')
+    ax.set_title('Dokładność vs N_steps')
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+    ax2 = axes[1]
+    bar_colors = [
+        '#ef4444' if r['after_elbow'] and not r['sig']   
+        else '#22c55e' if not r['after_elbow'] and r['sig'] 
+        else '#f59e0b'                                        
+        for r in mwu_results
+    ]
+    ax2.bar(mwu_df['label'], mwu_df['p'], color=bar_colors)
+    ax2.axhline(0.05, color='black', ls='--', lw=1.2, label='α = 0.05')
+    ax2.set_ylabel('p-value')
+    ax2.set_xlabel('Para kroków')
+    ax2.set_title('Istotność poprawy (Mann-Whitney U)')
+    ax2.legend(fontsize=8)
+    ax2.tick_params(axis='x', rotation=30)
+    ax2.grid(True, alpha=0.3, axis='y')
+
+    from matplotlib.patches import Patch
+    ax2.legend(handles=[
+        Patch(color='#22c55e', label='przed elbow, istotne'),
+        Patch(color='#ef4444', label='po elbow, nieistotne'),
+        Patch(color='#f59e0b', label='pozostałe'),
+        plt.Line2D([0], [0], color='black', ls='--', label='α = 0.05'),
+    ], fontsize=7)
+
+    if time_available:
+        ax3 = axes[2]
+        ax3.plot(steps_arr, time_arr, 's-', color='#f59e0b', lw=2, ms=6)
+        ax3.axvline(elbow_val, color='#ef4444', ls='--', lw=1.5,
+                    label=f'Elbow N={int(elbow_val)}')
+        ax3.set_xlabel('N_steps')
+        ax3.set_ylabel('Mediana czasu inferencji [s]')
+        ax3.set_title('Koszt obliczeniowy vs N_steps')
+        ax3.legend(fontsize=8)
+        ax3.grid(True, alpha=0.3)
+
+    plt.suptitle(
+        f'Kompromis dokładność–koszt | N_steps | szum: {noise_name}',
+        fontsize=11, fontweight='bold'
+    )
+    plt.tight_layout()
+    plt.savefig(f'../images/experiment3/nsteps_tradeoff_{noise_name}.pdf', bbox_inches='tight')
+    plt.show()
+
+    return {
+        'elbow':    int(elbow_val),
+        'agg':      agg,
+        'mwu':      mwu_df,
+        'confirmed': n_after == 0,
+    }
 
 
