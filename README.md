@@ -281,28 +281,26 @@ Oba algorytmy bazują na modelach dyfuzyjnych, jednak zostały zaprojektowane do
 * **SDEdit, gdy:** kompletny, ciągły przebieg fali, który jest silnie zakłócony szumem wysokoczęstotliwościowym. Dzięki czasowi przetwarzania na poziomie kilku milisekund (przy konfiguracji Conv1D, $T=80$, $S=2$ i harmonogramie liniowym), metoda ta idealnie nadaje się do systemów **pracujących w czasie rzeczywistym (real-time)**.
 * **FunDPS, gdy:** układ rejestruje dane w sposób rzadki lub doszło do drastycznej utraty próbek (**nawet do 90% braków**). Algorytm z priorem opartym na szumie białym oraz siłą nawigacji $\zeta \in [2.0, 4.0]$ gwarantuje bezbłędne odtworzenie ciągłej geometrii fali. Ze względu na długi czas obliczeń (ok. 14 sekund) jest to rozwiązanie dedykowane do **analizy stacjonarnej**.
 
-## Ograniczenia projektu
+Opracowany potok obliczeniowy wykazuje kilka ograniczeń metodologicznych i strukturalnych:
 
-Opracowany potok obliczeniowy wykazuje kilka kluczowych ograniczeń metodologicznych i strukturalnych:
-
-* **Izolowany i sztywny prior bezwarunkowy:** Proces uczenia sieci był prowadzony dla jednej, konkretnej funkcji na cały cykl. Model optymalny dla fali krokowej jest bezużyteczny dla funkcji wykładniczej. Każda zmiana badanej krzywej wymusza czasochłonne uczenie wag od zera, co ogranicza elastyczność systemu w warunkach zmiennych zadań.
-* **Brak niezależności rozdzielczościowej:** Ponieważ modele dyfuzyjne operują bezpośrednio na wektorach o stałej długości, system jest zablokowany na sztywnej dyskretyzacji siatki. Algorytmy nie posiadają zdolności do ciągłej interpolacji – nie rekonstruują ciągłej przestrzeni funkcyjnej, a jedynie skończony zbiór punktów.
-* **Statyczne sterowanie solwerem:** Parametry takie jak siła nawigacji ($\zeta$) czy punkt startu ($\tau$) są wprowadzane ręcznie jako wartości stałe. Brak dynamicznej pętli sprzężenia zwrotnego sprawia, że potok jest podatny na błędy konfiguracji i łatwo wpada w strefy niestabilności numerycznej (np. eksplozje gradientu wokół asymptot).
+* **Izolowany i sztywny prior bezwarunkowy:** Proces uczenia sieci był prowadzony w sposób izolowany dla jednej, konkretnej funkcji na cały cykl. W efekcie model optymalny dla fali krokowej staje się całkowicie bezużyteczny w kontakcie z funkcją wykładniczą. Każda zmiana badanej krzywej wymusza czasochłonną optymalizację wag od zera, co ogranicza elastyczność systemu w warunkach zmiennych zadań obliczeniowych.
+* **Brak niezależności rozdzielczościowej:** Ponieważ modele dyfuzyjne operują bezpośrednio na wektorach o stałej długości, rozwiązanie jest zablokowane na sztywnej dyskretyzacji siatki. Algorytmy nie posiadają naturalnej zdolności do ciągłej interpolacji – nie rekonstruują ciągłej przestrzeni funkcyjnej, a jedynie skończony zbiór punktów na wykresie.
+* **Statyczne sterowanie solwerem:** Parametry takie jak siła nawigacji (zeta) czy moment startu (tau) są wprowadzane ręcznie jako wartości stałe. Brak dynamicznej pętli sprzężenia zwrotnego sprawia, że potok obliczeniowy jest bardzo podatny na błędy konfiguracji i łatwo wpada w strefy niestabilności numerycznej (np. generując zniekształcenia linii wokół rejonów asymptotycznych).
 
 ---
 
 ## Potencjalne zastosowania i rozwój
 
 ### Obszary wdrożeniowe
-* Wykorzystanie FunDPS do szybkiego wygładzania i rekonstrukcji linii wykresów z wielogodzinnych symulacji na podstawie rzadkiego zestawu próbek (zamiast generowania tysięcy punktów metodą *brute force*).
-* Alternatywa dla klasycznej metody najmniejszych kwadratów w laboratoriach pomiarowych, pozwalająca na odbudowę kompletnych funkcji z rozproszonych punktów z zachowaniem geometrycznych założeń o gładkości linii.
-* Działanie jako stochastyczny filtr nakładający więzy ciągłości na rozwiązania trudnych równań różniczkowych zwyczajnych o nieznanej postaci analitycznej.
+* Wykorzystanie algorytmu FunDPS w systemach monitoringu środowiskowego lub przemysłowego do odtworzenia ciągłego profilu pola (np. ciśnienia czy temperatury) w miejscach pozbawionych czujników, wyłącznie na podstawie rzadkich obserwacji.
+* Alternatywa dla klasycznej regresji w warunkach ekstremalnego braku danych, umożliwiająca rekonstrukcję funkcji na podstawie rozproszonych punktów kontrolnych przy jednoczesnym zachowaniu spójności geometrycznej.
+* Wykorzystanie algorytmu SDEdit jako stochastycznego korektora błędów numerycznych, pozwalającego na stabilizację i obniżenie kosztów w deterministycznych solwerach (takich jak Metoda Różnic Skończonych czy Metoda Elementów Skończonych), eliminując potrzebę prowadzenia symulacji na skrajnie gęstych siatkach.
 
 ### Sugerowane kierunki badawcze
-* Porzucenie modeli jednoukładowych na rzecz sieci dyfuzyjnych trenowanych na całych rodzinach funkcji jednocześnie, sterowanych wektorami cech (np. stopień wielomianu, częstotliwość).
-* Zastąpienie konwolucji blokami samoatencji (*self-attention*), co pozwoli modelowi generatywnemu na jednoczesne wychwytywanie lokalnych załamań oraz globalnych trendów (okresowości, asymptot) na całej długości dziedziny.
-* Ciągłe stochastyczne równania różniczkowe (SDE): Oparcie generacji na ciągłym modelowaniu bazującym na wynikach (*score matching*), co uniezależni proces odszumiania od sztywnej liczby kroków $T$.
-* Ciągłe pola neuronowe (INR): Zastąpienie wektorów reprezentacją współrzędnościową w celu uzyskania całkowitej niezależności od rozdzielczości siatki wejściowej.
+* Porzucenie modeli jednoukładowych (one-shot) na rzecz wprowadzania mechanizmów warunkowania (np. wektorami cech), co pozwoliłoby jednej sieci dyfuzyjnej na elastyczną pracę z całymi rodzinami funkcji.
+* Zastosowanie mechanizmu samoatencji (*self-attention*) w postaci jednowymiarowych transformatorów dyfuzyjnych, co umożliwi jednoczesne wychwytywanie lokalnych gradientów oraz globalnych trendów na całej długości dziedziny.
+* **Integracja jawnych więzów fizycznych (*Physics-Informed Diffusion*):** Rozbudowanie funkcji straty o człon rezydualny sprawdzający, czy generowana krzywa spełnia narzucone równanie różniczkowe, co wymusiłoby przestrzeganie praw fizyki na całym wykresie. 
+* **Ciągłe pola neuronowe (INR):** Połączenie frameworku FunDPS z ciągłymi reprezentacjami neuronowymi (*Implicit Neural Representations*) w celu uzyskania całkowitej niezależności od rozdzielczości siatki wejściowej, co pozwoli na predykcję dokładnej wartości w dowolnie wybranym punkcie.
 
 
 ## Autorka
